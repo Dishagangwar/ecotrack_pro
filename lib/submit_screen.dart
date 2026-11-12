@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/carbon_tracker.dart';
-import '../services/firebase_service.dart';
-import '../models/carbon_footprint.dart';
+import 'package:provider/provider.dart';
+import 'providers/carbon_provider.dart';
 
 const Color bgDark = Color(0xFF050B14);
 const Color cardDark = Color(0xFF0B1623);
@@ -12,7 +11,8 @@ class SubmitScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tracker = CarbonTracker();
+    // watch() rebuilds this screen whenever a form updates a value.
+    final carbon = context.watch<CarbonProvider>();
 
     return Scaffold(
       backgroundColor: bgDark,
@@ -27,11 +27,11 @@ class SubmitScreen extends StatelessWidget {
         child: Column(
           children: [
             // Cards for each form emission
-            _co2Card("Transport", tracker.transportCO2),
-            _co2Card("Electricity", tracker.electricityCO2),
-            _co2Card("Water", tracker.waterCO2),
-            _co2Card("Waste", tracker.wasteCO2),
-            _co2Card("Food", tracker.foodCO2),
+            _co2Card("Transport", carbon.transportCO2),
+            _co2Card("Electricity", carbon.electricityCO2),
+            _co2Card("Water", carbon.waterCO2),
+            _co2Card("Waste", carbon.wasteCO2),
+            _co2Card("Food", carbon.foodCO2),
 
             const SizedBox(height: 30),
 
@@ -45,7 +45,7 @@ class SubmitScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  "Total CO₂: ${tracker.totalCO2.toStringAsFixed(2)} kg",
+                  "Total CO₂: ${carbon.totalCO2.toStringAsFixed(2)} kg",
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -69,43 +69,48 @@ class SubmitScreen extends StatelessWidget {
                     side: const BorderSide(color: accentBlue),
                   ),
                 ),
-                onPressed: () async {
-                  try {
-                    final footprint = CarbonFootprint(
-                      transportCO2: tracker.transportCO2,
-                      electricityCO2: tracker.electricityCO2,
-                      waterCO2: tracker.waterCO2,
-                      wasteCO2: tracker.wasteCO2,
-                      foodCO2: tracker.foodCO2,
-                    );
-
-                    await FirebaseService().saveCarbonFootprint(footprint);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("CO₂ data saved successfully 🌍"),
+                onPressed: carbon.isSaving
+                    ? null
+                    : () => _submit(context),
+                child: carbon.isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(accentBlue),
+                        ),
+                      )
+                    : const Text(
+                        "💾 Submit All CO₂ Data",
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    );
-
-                    tracker.reset();
-                    Navigator.pop(context);
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Error saving data: $e")),
-                    );
-                  }
-                },
-
-                child: const Text(
-                  "💾 Submit All CO₂ Data",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _submit(BuildContext context) async {
+    final carbon = context.read<CarbonProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    final success = await carbon.submitFootprint();
+    if (!context.mounted) return;
+
+    if (success) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("CO₂ data saved successfully 🌍")),
+      );
+      navigator.pop();
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text("Error saving data: ${carbon.errorMessage}")),
+      );
+    }
   }
 
   // Reusable card widget for each CO2 value

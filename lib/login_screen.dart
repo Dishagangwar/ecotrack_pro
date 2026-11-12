@@ -1,6 +1,7 @@
 import 'package:ecotrack_pro/home_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'signup_screen.dart'; // replace with your main screen
 
 const Color bgDark = Color(0xFF050B14);
@@ -19,8 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  bool _loading = false;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -104,8 +103,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          onPressed: _loading ? null : _login,
-                          child: _loading
+                          onPressed: context.watch<AuthProvider>().isLoading ? null : _login,
+                          child: context.watch<AuthProvider>().isLoading
                               ? const CircularProgressIndicator(
                                   color: accentBlue,
                                 )
@@ -129,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _login() async {
+  Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -138,36 +137,19 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    setState(() {
-      _loading = true;
-    });
+    final auth = context.read<AuthProvider>();
+    final success = await auth.login(email: email, password: password);
+    if (!mounted) return;
 
-    try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
+    if (success) {
       _showSnack("Login successful!");
-
-      // Reset CarbonTracker when a new user logs in
-      // Optional: you can load previous user data from Firebase here
-      // CarbonTracker().reset();
-
-      // Navigate to main screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       );
-    } on FirebaseAuthException catch (e) {
-      _showSnack(e.message ?? "Login failed");
-    } catch (e) {
-      _showSnack("Error: $e");
+    } else {
+      _showSnack(auth.errorMessage ?? "Login failed");
     }
-
-    setState(() {
-      _loading = false;
-    });
   }
 
   void _showSnack(String message) {

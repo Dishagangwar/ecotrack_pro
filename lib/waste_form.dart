@@ -1,4 +1,5 @@
-import 'package:ecotrack_pro/services/carbon_tracker.dart';
+import 'package:provider/provider.dart';
+import 'package:ecotrack_pro/providers/carbon_provider.dart';
 import 'package:flutter/material.dart';
 import 'transport_form.dart';
 import 'co2_calculator.dart';
@@ -22,7 +23,7 @@ class _WasteFormState extends State<WasteForm> {
         isRecycled: recycledToday == 'Yes',
       );
     });
-    CarbonTracker().wasteCO2 = co2Emission;
+    context.read<CarbonProvider>().wasteCO2 = co2Emission;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Estimated CO₂: ${co2Emission.toStringAsFixed(2)} kg"),

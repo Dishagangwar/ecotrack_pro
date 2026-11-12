@@ -1,11 +1,14 @@
 import 'package:ecotrack_pro/chatbot_screen.dart';
-import 'package:ecotrack_pro/co2_calculator.dart';
 import 'package:ecotrack_pro/scan_screen.dart';
 import 'package:ecotrack_pro/services/notification_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'track_daily_habits_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// firebase_auth exports its own AuthProvider, so hide it and use ours.
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'providers/auth_provider.dart';
+import 'providers/carbon_provider.dart';
 
 const Color bgDark = Color(0xFF050B14);
 const Color cardDark = Color(0xFF0B1623);
@@ -38,19 +41,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   );
   }
 
-  Stream<double> totalCO2Stream() {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-    return FirebaseFirestore.instance
-        .collection('carbonFootprints')
-        .doc(uid)
-        .snapshots()
-        .map((snapshot) {
-          if (!snapshot.exists) return 0.0;
-          return (snapshot.data()!['totalCO2'] ?? 0.0).toDouble();
-        });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     TextButton(
                       onPressed: () async {
                         Navigator.pop(context);
-                        await FirebaseAuth.instance.signOut();
+                        await context.read<AuthProvider>().logout();
                       },
                       child: const Text("Logout"),
                     ),
@@ -118,55 +108,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 20),
 
               // Stats cards
-              Row(
-                children: [
-                  StreamBuilder<double>(
-                    stream: totalCO2Stream(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return _statCard(
-                          title: "Carbon Footprint",
-                          value: "--",
-                          unit: "kg",
-                          icon: "🌍",
-                        );
-                      }
-
-                      final totalCO2 = snapshot.data ?? 0.0;
-
-                      return _statCard(
+              Consumer<CarbonProvider>(
+                builder: (context, carbon, _) {
+                  final loading = carbon.isLoadingSaved;
+                  return Row(
+                    children: [
+                      _statCard(
                         title: "Carbon Footprint",
-                        value: totalCO2.toStringAsFixed(2),
+                        value: loading
+                            ? "--"
+                            : carbon.savedTotalCO2.toStringAsFixed(2),
                         unit: "kg",
                         icon: "🌍",
-                      );
-                    },
-                  ),
-
-                  StreamBuilder<double>(
-                    stream: totalCO2Stream(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return _statCard(
-                          title: "Eco Score",
-                          value: "--",
-                          unit: "%",
-                          icon: "💚",
-                        );
-                      }
-
-                      final totalCO2 = snapshot.data ?? 0.0;
-                      final ecoScore = calculateEcoScore(totalCO2);
-
-                      return _statCard(
+                      ),
+                      _statCard(
                         title: "Eco Score",
-                        value: ecoScore.toStringAsFixed(0),
+                        value: loading
+                            ? "--"
+                            : carbon.savedEcoScore.toStringAsFixed(0),
                         unit: "%",
                         icon: "💚",
-                      );
-                    },
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 30),

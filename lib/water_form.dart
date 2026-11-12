@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'transport_form.dart';
 import 'co2_calculator.dart';
-import 'services/carbon_tracker.dart';
+import 'package:provider/provider.dart';
+import 'providers/carbon_provider.dart';
 class WaterForm extends StatefulWidget {
   const WaterForm({super.key});
 
@@ -27,7 +28,7 @@ class _WaterFormState extends State<WaterForm> {
         laundryLoads: laundryLoads,
       );
     });
-    CarbonTracker().waterCO2 = co2Emission;
+    context.read<CarbonProvider>().waterCO2 = co2Emission;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

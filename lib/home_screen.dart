@@ -1,43 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dashboard_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'providers/user_provider.dart';
 
 const Color bgDark = Color(0xFF050B14);
 const Color cardDark = Color(0xFF0B1623);
 const Color accentBlue = Color(0xFF00B2FF);
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
-}
-
-class _WelcomeScreenState extends State<WelcomeScreen> {
-  String username = '';
-
-  @override
-  void initState() {
-    super.initState();
-    fetchUsername();
-  }
-
-  Future<void> fetchUsername() async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
-
-    setState(() {
-      username = doc['username'];
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // UserProvider already fetched this when the user signed in.
+    final username = context.watch<UserProvider>().username;
+
     return Scaffold(
       backgroundColor: bgDark,
       body: Container(

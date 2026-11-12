@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'co2_calculator.dart';
-import 'services/carbon_tracker.dart';
+import 'package:provider/provider.dart';
+import 'providers/carbon_provider.dart';
 
 const Color bgDark = Color(0xFF050B14);
 const Color cardDark = Color(0xFF0B1623);
@@ -28,7 +29,7 @@ class _ElectricityFormState extends State<ElectricityForm> {
         appliance: selectedAppliance,
       );
     });
-    CarbonTracker().electricityCO2 = co2Emission;
+    context.read<CarbonProvider>().electricityCO2 = co2Emission;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Estimated CO₂: ${co2Emission.toStringAsFixed(2)} kg"),

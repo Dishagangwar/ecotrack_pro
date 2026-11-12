@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
 import 'login_screen.dart';
 
 const Color bgDark = Color(0xFF050B14);
@@ -20,52 +21,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _loading = false;
 
   Future<void> _signUp() async {
-  final email = _emailController.text.trim();
-  final password = _passwordController.text.trim();
-  final confirmPassword = _confirmPasswordController.text.trim();
-  final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+    final username = _usernameController.text.trim();
 
-  if (email.isEmpty || password.isEmpty || username.isEmpty) {
-    _showSnack("Please fill all fields");
-    return;
-  }
+    if (email.isEmpty || password.isEmpty || username.isEmpty) {
+      _showSnack("Please fill all fields");
+      return;
+    }
 
-  if (password != confirmPassword) {
-    _showSnack("Passwords do not match");
-    return;
-  }
+    if (password != confirmPassword) {
+      _showSnack("Passwords do not match");
+      return;
+    }
 
-  setState(() => _loading = true);
-
-  try {
-    final uid = await AuthService().createUserAndCarbonFootprint(
+    final auth = context.read<AuthProvider>();
+    final success = await auth.signUp(
       email: email,
       password: password,
       username: username,
     );
+    if (!mounted) return;
 
-    if (uid != null) {
+    if (success) {
       _showSnack("Account created successfully 🎉");
 
-      // optional: small delay so snackbar is visible
+      // small delay so the snackbar is visible
       await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } else {
-      _showSnack("Signup failed. Please try again.");
+      _showSnack(auth.errorMessage ?? "Signup failed. Please try again.");
     }
-  } catch (e) {
-    _showSnack(e.toString());
-  } finally {
-    setState(() => _loading = false);
   }
-}
 
   void _showSnack(String message) {
     ScaffoldMessenger.of(context)
@@ -166,8 +161,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
-                          onPressed: _loading ? null : _signUp,
-                          child: _loading
+                          onPressed: context.watch<AuthProvider>().isLoading ? null : _signUp,
+                          child: context.watch<AuthProvider>().isLoading
                               ? const CircularProgressIndicator(
                                   color: accentBlue,
                                 )
