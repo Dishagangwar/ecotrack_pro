@@ -17,10 +17,9 @@ void main() async {
   // Load API keys from .env (not committed to git)
   await dotenv.load(fileName: ".env");
 
-  // Initialize notifications FIRST
-  await LocalNotificationService.init(); 
-    await LocalNotificationService.scheduleAt(hour: 11,
-    minute: 25, title: "notification", body: "detail of notification");
+  // Set up the plugin and channel. Permission is requested later, from the
+  // UI, because the Android dialog needs a resumed Activity.
+  await LocalNotificationService.init();
 
   // Firebase init
   if (kIsWeb) {
@@ -43,8 +42,32 @@ void main() async {
 }
 
 
-class EcoTrackApp extends StatelessWidget {
+class EcoTrackApp extends StatefulWidget {
   const EcoTrackApp({super.key});
+
+  @override
+  State<EcoTrackApp> createState() => _EcoTrackAppState();
+}
+
+class _EcoTrackAppState extends State<EcoTrackApp> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Ask after the first frame, so there is a resumed Activity to show
+    // the system dialog on. Scheduling only happens once allowed.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final granted = await LocalNotificationService.requestPermissions();
+      if (!granted) return;
+
+      await LocalNotificationService.scheduleAt(
+        hour: 11,
+        minute: 25,
+        title: "🌱 EcoTrack",
+        body: "Time to log today's footprint",
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
