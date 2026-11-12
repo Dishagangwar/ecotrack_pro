@@ -1,12 +1,25 @@
 import 'dart:convert';
 import 'dart:io'; 
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiService {
-  static const String _apiKey = "AIzaSyCJjw4RuSFOeHyafN-FNQzc9Oc9UMgyyUg";
+  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 
-  static const String _endpoint =
+  static String get _endpoint =>
   "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=$_apiKey";
+  /// Keeps replies short and well structured so they render nicely
+  /// in the chat bubbles instead of arriving as a wall of text.
+  static const String _styleGuide = """
+You are EcoBot, a friendly sustainability assistant inside a mobile app.
+Answer in Markdown, kept short enough to read on a phone:
+- Lead with one short sentence that answers the question directly.
+- Then at most 3-4 bullet points, one line each.
+- Bold only the key term in a bullet, not whole sentences.
+- No headings, no tables, no emoji spam, no closing pep talk.
+Stay under 120 words unless the user asks for detail.
+""";
+
   static Future<String> getResponse(String prompt) async {
     try {
       print("🟡 Gemini request: $prompt");
@@ -18,7 +31,7 @@ class GeminiService {
           "contents": [
             {
               "parts": [
-                {"text": prompt},
+                {"text": "$_styleGuide\n\nUser question: $prompt"},
               ],
             },
           ],
