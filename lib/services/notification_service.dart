@@ -16,8 +16,18 @@ class LocalNotificationService {
   const androidInit =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const initSettings =
-      InitializationSettings(android: androidInit);
+  // 🔹 iOS / macOS need their own settings or initialize() throws
+  const darwinInit = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+
+  const initSettings = InitializationSettings(
+    android: androidInit,
+    iOS: darwinInit,
+    macOS: darwinInit,
+  );
 
   await _plugin.initialize(initSettings);
 
@@ -37,8 +47,15 @@ class LocalNotificationService {
   await androidPlugin?.createNotificationChannel(channel);
 
   // 🔹 Request permission (Android 13+)
+  // These resolve to null on iOS, so the calls are simply skipped there.
   await androidPlugin?.requestNotificationsPermission();
   await androidPlugin?.requestExactAlarmsPermission();
+
+  // 🔹 Request permission (iOS)
+  await _plugin
+      .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>()
+      ?.requestPermissions(alert: true, badge: true, sound: true);
 
 }
 
@@ -58,6 +75,11 @@ class LocalNotificationService {
           'Eco Notifications',
           importance: Importance.max,
           priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
         ),
       ),
     );
@@ -97,6 +119,11 @@ class LocalNotificationService {
         channelDescription: 'EcoTrack reminders & summaries',
         importance: Importance.max,
         priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
       ),
     ),
     androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // ✅ FIX
